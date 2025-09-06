@@ -1,0 +1,179 @@
+{% extends 'main.html' %}
+
+{% block content %}
+
+{% include 'status.html' %}
+
+<section style="background-color: #eee;">
+  <div class="container py-5">
+
+    <div class="row">
+
+      <div class="col-md-6 col-lg-5 col-xl-4 mb-4 mb-md-0">
+
+        <h5 class="font-weight-bold mb-3 text-center text-lg-start">Buyers</h5>
+        <div class="card">
+          <div class="card-body">
+
+            <ul class="list-unstyled mb-0">
+              {% for buyer in buyers %}
+              <li class="p-2 border-bottom" style="background-color: #eee;">
+                <div class="d-flex justify-content-between">
+                  <div class="d-flex flex-row">
+                    <img src="https://mdbcdn.b-cdn.net/img/Photos/Avatars/avatar-8.webp" alt="avatar"
+                      class="rounded-circle d-flex align-self-center me-3 shadow-1-strong" width="60">
+                    <div class="pt-1">
+                      <p class="fw-bold mb-0">{{buyer.name}}</p>
+                      <p class="small text-muted">{{buyer.email}}</p>
+                      <p class="small text-muted">Phone: {{buyer.phone_no}}</p>
+                    </div>
+                  </div>
+                  <div class="pt-1">
+                    <p class="small text-muted mb-1">Messages: {{buyer.message_set.count}}</p>
+                    <span class="badge bg-primary float-end">Active</span>
+                  </div>
+                </div>
+              </li>
+              {% empty %}
+              <li class="p-3 text-center">
+                <p class="text-muted">No buyers have contacted you yet.</p>
+              </li>
+              {% endfor %}
+            </ul>
+
+          </div>
+        </div>
+
+      </div>
+
+      <div class="col-md-6 col-lg-7 col-xl-8">
+
+        <div id="messages" class="mb-3" style="max-height: 400px; overflow-y: auto;">
+          <!-- Real-time messages will appear here -->
+        </div>
+
+        <ul class="list-unstyled">
+          <!-- Display received messages (from buyers) -->
+          {% for message in received_messages %}
+          <li class="d-flex justify-content-between mb-4">
+            <div class="card w-100">
+              <div class="card-header d-flex justify-content-between p-3">
+                <p class="fw-bold mb-0">{{message.sender.name}} (Buyer)</p>
+                <p class="text-muted small mb-0"><i class="far fa-clock"></i> {{message.created|timesince}} ago</p>
+              </div>
+              <div class="card-body">
+                <p class="mb-0">{{message.body}}</p>
+              </div>
+            </div>
+            <img src="https://mdbcdn.b-cdn.net/img/Photos/Avatars/avatar-5.webp" alt="avatar"
+              class="rounded-circle d-flex align-self-start ms-3 shadow-1-strong" width="60">
+          </li>
+          {% endfor %}
+
+          <!-- Display sent messages (to buyers) -->
+          {% for message in sent_messages %}
+          <li class="d-flex justify-content-between mb-4">
+            <img src="https://mdbcdn.b-cdn.net/img/Photos/Avatars/avatar-6.webp" alt="avatar"
+              class="rounded-circle d-flex align-self-start me-3 shadow-1-strong" width="60">
+            <div class="card">
+              <div class="card-header d-flex justify-content-between p-3">
+                <p class="fw-bold mb-0">{{message.sender.name}} (You)</p>
+                <p class="text-muted small mb-0"><i class="far fa-clock"></i>{{message.created|timesince}}</p>
+              </div>
+              <div class="card-body">
+                <p class="mb-0">{{message.body}}</p>
+              </div>
+            </div>
+          </li>
+          {% endfor %}
+          {% if buyers %}
+          <form method="POST" id="replyForm">
+            {% csrf_token %}
+            <li class="bg-white mb-3">
+              <div class="form-outline mb-3">
+                <select class="form-select" name="buyer_id" id="buyerSelect" required>
+                  <option value="">Select a buyer to reply to</option>
+                  {% for buyer in buyers %}
+                  <option value="{{buyer.id}}">{{buyer.name}} ({{buyer.email}})</option>
+                  {% endfor %}
+                </select>
+                <label class="form-label">Reply to Buyer</label>
+              </div>
+              <div class="form-outline">
+                <textarea class="form-control" id="replyMessage" name="body" rows="2" placeholder="Type your message here..." required></textarea>
+                <label class="form-label" for="replyMessage">Message</label>
+              </div>
+            </li>
+            <button type="submit" class="btn btn-info btn-rounded float-end">Send Reply</button>
+          </form>
+          {% else %}
+          <div class="alert alert-info">
+            <p class="mb-0">No messages from buyers yet. Messages will appear here when buyers contact you about your products.</p>
+          </div>
+          {% endif %}
+        </ul>
+
+      </div>
+
+    </div>
+
+  </div>
+</section>
+
+<script>
+// Initialize real-time chat for sellers
+document.addEventListener('DOMContentLoaded', function() {
+    // Set current user info
+    window.currentSellerId = {{customer.id}};
+    
+    // Initialize WebSocket connections for each buyer
+    {% for buyer in buyers %}
+    const roomName{{buyer.id}} = `buyer_{{buyer.id}}_seller_{{customer.id}}`;
+    const chatSocket{{buyer.id}} = initializeChat(
+        roomName{{buyer.id}},
+        {{customer.id}},      // sender_id (seller)
+        {{buyer.id}},         // receiver_id (buyer)
+        'seller'              // sender_type
+    );
+    {% endfor %}
+    
+    // Handle reply form submission
+    const replyForm = document.getElementById('replyForm');
+    const replyMessage = document.getElementById('replyMessage');
+    const buyerSelect = document.getElementById('buyerSelect');
+    
+    if (replyForm) {
+        replyForm.addEventListener('submit', function(e) {
+            const message = replyMessage.value.trim();
+            const buyerId = buyerSelect.value;
+            
+            if (message && buyerId) {
+                // Send via WebSocket for real-time if available
+                const roomName = `buyer_${buyerId}_seller_{{customer.id}}`;
+                const chatSocket = window[`chatSocket${buyerId}`];
+                
+                if (chatSocket && chatSocket.readyState === WebSocket.OPEN) {
+                    chatSocket.send(JSON.stringify({
+                        'type': 'chat_message',
+                        'message': message,
+                        'sender_id': {{customer.id}},
+                        'receiver_id': buyerId,
+                        'sender_type': 'seller'
+                    }));
+                }
+                
+                // Let the form submit normally for database persistence
+                // Don't prevent default - let Django handle the form submission
+            } else {
+                e.preventDefault();
+                alert('Please select a buyer and enter a message.');
+            }
+        });
+    }
+    
+    // Auto-scroll to bottom when page loads
+    scrollToBottom();
+});
+</script>
+
+{% endblock %}

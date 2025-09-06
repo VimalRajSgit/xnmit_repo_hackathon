@@ -1,0 +1,160 @@
+{% extends 'main.html' %}
+{% load static %}
+
+{% block content %}
+
+{% include 'status.html' %}
+
+<section style="background-color: #d298ef;">
+  <div class="container py-5">
+    <div class="row">
+      <div class="col-lg-4">
+        <div class="card mb-4">
+          <div class="card-body text-center">
+            <img src="https://mdbcdn.b-cdn.net/img/Photos/new-templates/bootstrap-chat/ava3-bg.webp"
+              alt="avatar" class="rounded-circle img-fluid" style="width: 150px;">
+            <h5 class="my-3">{{customer.name}}</h5>
+            <p class="text-muted mb-1">Seller</p>
+            <p class="text-muted mb-4">{{customer.residence}}</p>
+            <div class="d-flex justify-content-center mb-2">
+              <a href="{% url 'room' customer.id %}" class="btn btn-primary">
+                <i class="fas fa-comments"></i> View Messages ({{total_messages}})
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="col-lg-8">
+        <div class="card mb-4">
+          <div class="card-body">
+            <div class="row">
+              <div class="col-sm-3">
+                <p class="mb-0">Full Name</p>
+              </div>
+              <div class="col-sm-9">
+                <p class="text-muted mb-0">{{customer.name}}</p>
+              </div>
+            </div>
+            <hr>
+            <div class="row">
+              <div class="col-sm-3">
+                <p class="mb-0">Email</p>
+              </div>
+              <div class="col-sm-9">
+                <p class="text-muted mb-0">{{customer.user.email}}</p>
+              </div>
+            </div>
+            <hr>
+            <div class="row">
+              <div class="col-sm-3">
+                <p class="mb-0">Phone</p>
+              </div>
+              <div class="col-sm-9">
+                <p class="text-muted mb-0">{{customer.phone_no}}</p>
+              </div>
+            </div>
+            <hr>
+            <div class="row">
+              <div class="col-sm-3">
+                <p class="mb-0">ID Number</p>
+              </div>
+              <div class="col-sm-9">
+                <p class="text-muted mb-0">{{customer.id_no}}</p>
+              </div>
+            </div>
+            <hr>
+            <div class="row">
+              <div class="col-sm-3">
+                <p class="mb-0">Total Products</p>
+              </div>
+              <div class="col-sm-9">
+                <p class="text-muted mb-0">{{products.count}}</p>
+              </div>
+            </div>
+            <hr>
+            <div class="row">
+              <div class="col-sm-3">
+                <p class="mb-0">Total Messages</p>
+              </div>
+              <div class="col-sm-9">
+                <p class="text-muted mb-0">{{total_messages}}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Recent Messages Section -->
+    <div class="row">
+      <div class="col-12">
+        <div class="card">
+          <div class="card-header">
+            <h5 class="mb-0">Recent Messages</h5>
+          </div>
+          <div class="card-body">
+            {% if recent_messages %}
+              {% for message in recent_messages %}
+              <div class="d-flex justify-content-between align-items-center mb-3 p-3 border rounded">
+                <div>
+                  <h6 class="mb-1">{{message.sender.name}}</h6>
+                  <p class="mb-1">{{message.body|truncatechars:100}}</p>
+                  <small class="text-muted">{{message.created|timesince}} ago</small>
+                </div>
+                <a href="{% url 'room' customer.id %}" class="btn btn-sm btn-outline-primary">Reply</a>
+              </div>
+              {% endfor %}
+              <div class="text-center">
+                <a href="{% url 'room' customer.id %}" class="btn btn-primary">View All Messages</a>
+              </div>
+            {% else %}
+              <p class="text-muted text-center">No messages yet. Messages from buyers will appear here.</p>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Products Section -->
+    <div class="row mt-4">
+      <div class="col-12">
+        <div class="card">
+          <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">Your Products</h5>
+            <a href="{% url 'products' customer.id %}" class="btn btn-success">
+              <i class="fas fa-plus"></i> Add Product
+            </a>
+          </div>
+          <div class="card-body">
+            {% if products %}
+              <div class="row">
+                {% for product in products %}
+                <div class="col-md-6 col-lg-4 mb-3">
+                  <div class="card">
+                    {% if product.product_image %}
+                      <img src="{{product.product_image.url}}" class="card-img-top" style="height: 200px; object-fit: cover;">
+                    {% else %}
+                      <img src="{% static '/img/mdb-favicon.ico' %}" class="card-img-top" style="height: 200px; object-fit: cover;">
+                    {% endif %}
+                    <div class="card-body">
+                      <h6 class="card-title">{{product.product_name}}</h6>
+                      <p class="card-text">Price: ₹{{product.price}}</p>
+                      <p class="card-text">State: {{product.get_state_display}}</p>
+                      <a href="{% url 'update_product' product.id %}" class="btn btn-sm btn-warning">Edit</a>
+                    </div>
+                  </div>
+                </div>
+                {% endfor %}
+              </div>
+            {% else %}
+              <p class="text-muted text-center">No products yet. <a href="{% url 'products' customer.id %}">Add your first product</a></p>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+{% endblock %}
